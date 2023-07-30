@@ -1,62 +1,85 @@
+// Replace 'YOUR_OPENAI_API_KEY' with your actual API key from OpenAI
+const openAiApiKey = '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';
+
+function getCurrentTime() {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function appendMessage(message, isUser) {
+    const msgContainer = document.createElement('div');
+    msgContainer.classList.add(isUser ? 'msgCon1' : 'msgCon2');
+
+    const msgContent = document.createElement('div');
+    msgContent.classList.add(isUser ? 'right' : 'left');
+    msgContent.textContent = message;
+
+    const timestamp = document.createElement('div');
+    timestamp.classList.add('timestamp');
+    timestamp.textContent = getCurrentTime();
+
+    msgContainer.appendChild(msgContent);
+    msgContainer.appendChild(timestamp);
+
+    document.getElementById('msg').appendChild(msgContainer);
+
+    scrollChat();
+}
 
 function init() {
-    let res_elm = document.createElement("div");
-    res_elm.innerHTML="Hello Myself Aco, How can I help you?" ;
-    res_elm.setAttribute("class","left");
- 
-    document.getElementById('msg').appendChild(res_elm);
+    const welcomeMessage = "Hello, I'm ChatBot! How can I assist you?";
+    appendMessage(welcomeMessage, false);
 }
- 
- 
-document.getElementById('reply').addEventListener("click", async (e) => {
-    e.preventDefault();
- 
-    var req = document.getElementById('msg_send').value ;
- 
-    if (req == undefined || req== "") {
- 
+
+function scrollChat() {
+    const chatContainer = document.getElementById('msg');
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+async function processUserMessage(userMessage) {
+    appendMessage(userMessage, true);
+
+    const openAiApiEndpoint = 'https://api.openai.com/v1/engines/text-davinci-003/completions';
+    try {
+        const response = await axios.post(
+            openAiApiEndpoint,
+            {
+                prompt: userMessage,
+                max_tokens: 100,
+                n: 1,
+                stop: '\n'
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${openAiApiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        console.log(response);
+        const botResponse = response.data.choices[0].text;
+        appendMessage(botResponse, false);
+    } catch (error) {
+        console.error("Error fetching bot response:", error);
+        appendMessage("Sorry, there was an error processing your request.", false);
     }
-    else{
-     
-        var res = "";
-        await axios.get(`https://api.monkedev.com/fun/chat?msg=${req}`).then(data => {
-            res = JSON.stringify(data.data.response)
-        })
-           
-        let data_req = document.createElement('div');
-        let data_res = document.createElement('div');
- 
-        let container1 = document.createElement('div');
-        let container2 = document.createElement('div');
- 
-        container1.setAttribute("class","msgCon1");
-        container2.setAttribute("class","msgCon2");
- 
-        data_req.innerHTML = req ;
-        data_res.innerHTML = res ;
- 
- 
-        data_req.setAttribute("class","right");
-        data_res.setAttribute("class","left");
- 
-        let message = document.getElementById('msg');
- 
-         
-        message.appendChild(container1);
-        message.appendChild(container2);
- 
-        container1.appendChild(data_req);
-        container2.appendChild(data_res);
- 
-        document.getElementById('msg_send').value = "";
- 
-    function scroll() {
-        var scrollMsg = document.getElementById('msg')
-        scrollMsg.scrollTop = scrollMsg.scrollHeight ;
+}
+
+document.getElementById('reply').addEventListener("click", () => {
+    const inputElement = document.getElementById('msg_send');
+    const userMessage = inputElement.value.trim();
+    inputElement.value = "";
+
+    processUserMessage(userMessage);
+});
+
+document.getElementById('msg_send').addEventListener("keypress", (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const inputElement = document.getElementById('msg_send');
+        const userMessage = inputElement.value.trim();
+        inputElement.value = "";
+
+        processUserMessage(userMessage);
     }
-    scroll();
- 
-    }
- 
- 
-    });
+});
